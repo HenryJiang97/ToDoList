@@ -10,13 +10,14 @@ import UIKit
 
 class ViewController: UITableViewController {
     
-    let itemArray = ["To Do 1", "To Do 2", "To Do 3"]
+    var itemArray = ["To Do 1", "To Do 2", "To Do 3"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
     }
 
+    ////////////////////////////////////////////////////////////////////////
     // Table view setting
     // Number of rows
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -34,7 +35,8 @@ class ViewController: UITableViewController {
         return cell;
     }
     
-    
+
+    ////////////////////////////////////////////////////////////////////////
     // Table View Delegate Methods   
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
@@ -49,5 +51,41 @@ class ViewController: UITableViewController {
         // Deselect row
         tableView.deselectRow(at: indexPath, animated: true)
     }
+    
+    
+    ////////////////////////////////////////////////////////////////////////
+    // Add Button action when pressed
+    
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
+        var textField = UITextField()
+        
+        // Init a UIAlertController
+        let alert = UIAlertController(title: "Add New ToDo Item", message: "", preferredStyle: .alert)
+        
+        // Add a Text Field to the Alert Controller
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create new item"
+            textField = alertTextField
+        }
+        
+        // Action when pressed the "Add Item" button
+        let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            
+            // Happen after "Add Item button is clicked by the user"
+            
+            // Add new task to the item array and reload tableview
+            self.itemArray.append(textField.text!)
+            self.tableView.reloadData()
+        }
+        
+        // Add the action to the alert
+        alert.addAction(action)
+        
+        
+        // Present the alert
+        present(alert, animated: true, completion: nil)
+    }
+    
+    
 }
-
