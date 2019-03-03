@@ -11,10 +11,15 @@ import UIKit
 class ViewController: UITableViewController {
     
     var itemArray = ["To Do 1", "To Do 2", "To Do 3"]
+    
+    let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        if let items = defaults.array(forKey: "ToDoListArray") as? [String] {
+            itemArray = items
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -76,6 +81,9 @@ class ViewController: UITableViewController {
             
             // Add new task to the item array and reload tableview
             self.itemArray.append(textField.text!)
+            
+            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+            
             self.tableView.reloadData()
         }
         
