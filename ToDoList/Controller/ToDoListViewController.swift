@@ -13,28 +13,16 @@ class ViewController: UITableViewController {
     var itemArray = [item]()
     
     let defaults = UserDefaults.standard
-
+    
+    // Define the Datafile Path to store the data to device
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("items.plist")
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Init itemArray
-        let newItem1 = item()
-        newItem1.title = "To Do 1"
-        itemArray.append(newItem1)
-        
-        let newItem2 = item()
-        newItem2.title = "To Do 2"
-        itemArray.append(newItem2)
-        
-        let newItem3 = item()
-        newItem3.title = "To Do 3"
-        itemArray.append(newItem3)
-        
-        
-        // Reset to defaults saved last time
-        if let items = defaults.array(forKey: "ToDoListArray") as? [item] {
-            itemArray = items
-        }
+        // Load items from Datafile Path
+        loadItems()
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -61,10 +49,15 @@ class ViewController: UITableViewController {
     
 
     ////////////////////////////////////////////////////////////////////////
-    // Table View Delegate Methods   
+    // Table View Delegate Methods
+    
+    // When click on TableView Row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         itemArray[indexPath.row].ifDone = !itemArray[indexPath.row].ifDone
+        
+        // Store arrays to datafile path
+        self.saveItems()
         
         
         // Appears checkmark when itemArray[currentRow].ifDone == true,
@@ -107,9 +100,11 @@ class ViewController: UITableViewController {
             
             
             // Store arrays to user defaults for later use
-            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+//            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
             
-            self.tableView.reloadData()
+            // Store arrays to datafile path
+            self.saveItems()
+            
         }
         
         // Add the action to the alert
@@ -120,5 +115,34 @@ class ViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
     
+    
+    ////////////////////////////////////////////////////////////////////////
+    // Save data method
+    func saveItems() {
+        // Store arrays using Datafile Path
+        let encoder = PropertyListEncoder()
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Encoding itemArray Error, \(error)")
+        }
+        
+        self.tableView.reloadData()
+    }
+    
+    // Load data method
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            
+            do {
+                itemArray = try decoder.decode([item].self, from: data)
+            } catch {
+                print("Decoding itemArray Error, \(error)")
+            }
+        }
+    }
     
 }
