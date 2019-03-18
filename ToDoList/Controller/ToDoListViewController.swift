@@ -10,14 +10,29 @@ import UIKit
 
 class ViewController: UITableViewController {
     
-    var itemArray = ["To Do 1", "To Do 2", "To Do 3"]
+    var itemArray = [item]()
     
     let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if let items = defaults.array(forKey: "ToDoListArray") as? [String] {
+        // Init itemArray
+        let newItem1 = item()
+        newItem1.title = "To Do 1"
+        itemArray.append(newItem1)
+        
+        let newItem2 = item()
+        newItem2.title = "To Do 2"
+        itemArray.append(newItem2)
+        
+        let newItem3 = item()
+        newItem3.title = "To Do 3"
+        itemArray.append(newItem3)
+        
+        
+        // Reset to defaults saved last time
+        if let items = defaults.array(forKey: "ToDoListArray") as? [item] {
             itemArray = items
         }
     }
@@ -35,7 +50,11 @@ class ViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
-        cell.textLabel?.text = itemArray[indexPath.row];
+        // Set default text for textLabel
+        cell.textLabel?.text = itemArray[indexPath.row].title
+        
+        // Set default accessory type for each row
+        cell.accessoryType = (itemArray[indexPath.row].ifDone) ? .checkmark : .none
         
         return cell;
     }
@@ -45,12 +64,13 @@ class ViewController: UITableViewController {
     // Table View Delegate Methods   
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        // Appears checkmark when selected, disappear when deselected
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        } else {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
+        itemArray[indexPath.row].ifDone = !itemArray[indexPath.row].ifDone
+        
+        
+        // Appears checkmark when itemArray[currentRow].ifDone == true,
+        // disappear when ifDone == false
+        
+        tableView.cellForRow(at: indexPath)?.accessoryType = (itemArray[indexPath.row].ifDone) ? .checkmark : .none
         
         
         // Deselect row
@@ -80,8 +100,13 @@ class ViewController: UITableViewController {
             // Happen after "Add Item button is clicked by the user"
             
             // Add new task to the item array and reload tableview
-            self.itemArray.append(textField.text!)
+            let newItem = item()
+            newItem.title = textField.text!
             
+            self.itemArray.append(newItem)
+            
+            
+            // Store arrays to user defaults for later use
             self.defaults.set(self.itemArray, forKey: "ToDoListArray")
             
             self.tableView.reloadData()
