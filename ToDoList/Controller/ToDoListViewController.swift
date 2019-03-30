@@ -7,26 +7,34 @@
 //
 
 import UIKit
+import CoreData
 
 class ViewController: UITableViewController {
     
-    var itemArray = [item]()
+    var itemArray = [Item]()
     
-    let defaults = UserDefaults.standard
+    var selectedCategory : Category? {
+        didSet {
+            // Load items from Datafile Path
+            
+            loadItems()
+        }
+    }
     
-    // Define the Datafile Path to store the data to device
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("items.plist")
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
+      
         
-        // Load items from Datafile Path
-        loadItems()
     }
 
+    
     ////////////////////////////////////////////////////////////////////////
-    // Table view setting
+    //MARK: - TableView DataSource Methods
+    
     // Number of rows
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
@@ -49,7 +57,7 @@ class ViewController: UITableViewController {
     
 
     ////////////////////////////////////////////////////////////////////////
-    // Table View Delegate Methods
+    //MARK: - Table View Delegate Methods
     
     // When click on TableView Row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -92,15 +100,12 @@ class ViewController: UITableViewController {
             
             // Happen after "Add Item button is clicked by the user"
             
-            // Add new task to the item array and reload tableview
-            let newItem = item()
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
-            
+            newItem.ifDone = false;
+            newItem.parentCategory = self.selectedCategory
             self.itemArray.append(newItem)
             
-            
-            // Store arrays to user defaults for later use
-//            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
             
             // Store arrays to datafile path
             self.saveItems()
@@ -116,33 +121,77 @@ class ViewController: UITableViewController {
     }
     
     
+    
+    
     ////////////////////////////////////////////////////////////////////////
+    //MARK: - Data Manipulation Methods
     // Save data method
     func saveItems() {
-        // Store arrays using Datafile Path
-        let encoder = PropertyListEncoder()
         
         do {
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFilePath!)
+            try context.save()
         } catch {
-            print("Encoding itemArray Error, \(error)")
+            print("Error Saving Context \(error)")
         }
         
-        self.tableView.reloadData()
+        tableView.reloadData()
     }
     
     // Load data method
-    func loadItems() {
-        if let data = try? Data(contentsOf: dataFilePath!) {
-            let decoder = PropertyListDecoder()
+    func loadItems(with additionalPredicate : NSPredicate? = nil) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        // Predicat to get items matchs the category name
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        // Combine additional predicate with category predicate
+        if (additionalPredicate != nil) {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate!])
+        } else {
+            request.predicate = categoryPredicate
+        }
+        
+        
+        // Sort the results
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        
+        do {
+            itemArray = try context.fetch(request)
+        } catch {
+            print("Error fetching data from context, \(error)")
+        }
+        
+        tableView.reloadData()
+    }
+    
+}
+
+
+//MARK: - Search bar methods
+//////////////////////////////////////////////////////////////////////
+extension ViewController : UISearchBarDelegate {
+    
+    // Search Bar Delegate
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        // Get results
+        let predicate = NSPredicate(format: "title CONTAINS %@", searchBar.text!)
+        
+        loadItems(with: predicate)
+
+    }
+    
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
             
-            do {
-                itemArray = try decoder.decode([item].self, from: data)
-            } catch {
-                print("Decoding itemArray Error, \(error)")
+            // Get the main Thread and Restore to the original state
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
             }
         }
     }
-    
 }
