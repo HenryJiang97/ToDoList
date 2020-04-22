@@ -7,11 +7,12 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ViewController: UITableViewController {
     
-    var itemArray = [Item]()
+    var todoItems : Results<Item>?
+    let realm = try! Realm()
     
     var selectedCategory : Category? {
         didSet {
@@ -21,14 +22,10 @@ class ViewController: UITableViewController {
         }
     }
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
-    
     
     override func viewDidLoad() {
         super.viewDidLoad()
       
-        
     }
 
     
@@ -38,7 +35,7 @@ class ViewController: UITableViewController {
     // Number of rows
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return itemArray.count;
+        return todoItems?.count ?? 1;
     }
     
     // Item in the cell
@@ -46,11 +43,14 @@ class ViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
-        // Set default text for textLabel
-        cell.textLabel?.text = itemArray[indexPath.row].title
         
-        // Set default accessory type for each row
-        cell.accessoryType = (itemArray[indexPath.row].ifDone) ? .checkmark : .none
+        if let item = todoItems?[indexPath.row] {
+            cell.textLabel?.text = item.title
+            cell.accessoryType = item.done ? .checkmark : .none
+        } else {
+            cell.textLabel?.text = "No Items Added"
+        }
+        
         
         return cell;
     }
@@ -62,18 +62,16 @@ class ViewController: UITableViewController {
     // When click on TableView Row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        itemArray[indexPath.row].ifDone = !itemArray[indexPath.row].ifDone
-        
-        // Store arrays to datafile path
-        self.saveItems()
-        
-        
-        // Appears checkmark when itemArray[currentRow].ifDone == true,
-        // disappear when ifDone == false
-        
-        tableView.cellForRow(at: indexPath)?.accessoryType = (itemArray[indexPath.row].ifDone) ? .checkmark : .none
-        
-        
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error saving done status, \(error)")
+            }
+        }
+
         // Deselect row
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -100,15 +98,21 @@ class ViewController: UITableViewController {
             
             // Happen after "Add Item button is clicked by the user"
             
-            let newItem = Item(context: self.context)
-            newItem.title = textField.text!
-            newItem.ifDone = false;
-            newItem.parentCategory = self.selectedCategory
-            self.itemArray.append(newItem)
+            if let currentCategory = self.selectedCategory {
+                do {
+                    try self.realm.write {
+                        let newItem = Item()
+                        newItem.title = textField.text!
+                        newItem.dateCreated = Date()
+                        currentCategory.items.append(newItem)
+                    }
+                } catch {
+                    print("Error saving new items, \(error)")
+                }
+                
+            }
             
-            
-            // Store arrays to datafile path
-            self.saveItems()
+            self.tableView.reloadData()
             
         }
         
@@ -125,69 +129,34 @@ class ViewController: UITableViewController {
     
     ////////////////////////////////////////////////////////////////////////
     //MARK: - Data Manipulation Methods
-    // Save data method
-    func saveItems() {
-        
-        do {
-            try context.save()
-        } catch {
-            print("Error Saving Context \(error)")
-        }
-        
-        tableView.reloadData()
-    }
     
     // Load data method
-    func loadItems(with additionalPredicate : NSPredicate? = nil) {
+    func loadItems() {
         
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        
-        // Predicat to get items matchs the category name
-        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-        
-        // Combine additional predicate with category predicate
-        if (additionalPredicate != nil) {
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate!])
-        } else {
-            request.predicate = categoryPredicate
-        }
-        
-        
-        // Sort the results
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        
-        
-        do {
-            itemArray = try context.fetch(request)
-        } catch {
-            print("Error fetching data from context, \(error)")
-        }
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         
         tableView.reloadData()
     }
-    
 }
 
 
 //MARK: - Search bar methods
 //////////////////////////////////////////////////////////////////////
 extension ViewController : UISearchBarDelegate {
-    
+
     // Search Bar Delegate
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
-        // Get results
-        let predicate = NSPredicate(format: "title CONTAINS %@", searchBar.text!)
+        todoItems = todoItems?.filter("title CONTAINS %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
         
-        loadItems(with: predicate)
-
+        tableView.reloadData()
     }
-    
-    
+
+
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
             loadItems()
-            
+
             // Get the main Thread and Restore to the original state
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
