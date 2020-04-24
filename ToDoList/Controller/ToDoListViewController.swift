@@ -46,9 +46,12 @@ class ViewController: SwipeTableViewController {
                 
                 navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
                 
+                // Set navigation bar title color
+                let textAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navBarColor, returnFlat: true)]
+                navBar.titleTextAttributes = textAttributes
+                
                 searchBar.barTintColor = navBarColor
             }
-            
         }
     }
     
