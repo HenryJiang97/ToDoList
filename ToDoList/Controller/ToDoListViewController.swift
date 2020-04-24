@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class ViewController: UITableViewController {
+class ViewController: SwipeTableViewController {
     
     var todoItems : Results<Item>?
     let realm = try! Realm()
@@ -19,6 +19,8 @@ class ViewController: UITableViewController {
             // Load items from Datafile Path
             
             loadItems()
+            
+            tableView.rowHeight = 80.0
         }
     }
     
@@ -41,7 +43,7 @@ class ViewController: UITableViewController {
     // Item in the cell
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         
         if let item = todoItems?[indexPath.row] {
@@ -136,6 +138,21 @@ class ViewController: UITableViewController {
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         
         tableView.reloadData()
+    }
+    
+    //MARK: - Delete Data from swipe
+    override func updateModel(at indexPath: IndexPath) {
+
+        if let todoItemsToDelete = self.todoItems?[indexPath.row] {
+
+            do {
+                try self.realm.write {
+                    self.realm.delete(todoItemsToDelete)
+                }
+            } catch {
+                print("Error Deleting Context \(error)")
+            }
+        }
     }
 }
 
