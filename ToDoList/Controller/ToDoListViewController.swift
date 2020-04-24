@@ -15,14 +15,12 @@ class ViewController: SwipeTableViewController {
     var todoItems : Results<Item>?
     let realm = try! Realm()
     
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     var selectedCategory : Category? {
         didSet {
             // Load items from Datafile Path
-            
             loadItems()
-            
-            tableView.rowHeight = 80.0
-            tableView.separatorStyle = .none
         }
     }
     
@@ -30,7 +28,39 @@ class ViewController: SwipeTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
       
+        tableView.rowHeight = 80.0
+        tableView.separatorStyle = .none
+        
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation Controller does not exist")}
+        
+        if let colorHex = selectedCategory?.color {
+            
+            title = selectedCategory!.name
+            
+            if let navBarColor = UIColor(hexString: colorHex) {
+                navBar.barTintColor = navBarColor
+                
+                navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+                
+                searchBar.barTintColor = navBarColor
+            }
+            
+        }
+    }
+    
+    // Change the color back to original when the page is about to disappear
+    override func viewWillDisappear(_ animated: Bool) {
+        
+        guard let originalColor = UIColor(hexString: "1D9BF6") else {fatalError()}
+        
+        navigationController?.navigationBar.barTintColor = originalColor
+        navigationController?.navigationBar.tintColor = FlatWhite()
+    }
+    
 
     
     ////////////////////////////////////////////////////////////////////////
